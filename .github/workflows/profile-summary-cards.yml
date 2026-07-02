@@ -1,1 +1,54 @@
+name: Update README Analytics
 
+on:
+  schedule:
+    - cron: "0 0 * * *" # every 24 hours
+  workflow_dispatch: # lets you trigger it manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  update-cards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create assets folder
+        run: mkdir -p assets
+
+      - name: Download GitHub Stats card
+        run: |
+          curl -sL "https://github-readme-stats.vercel.app/api?username=MistryVishwa&show_icons=true&theme=tokyonight&hide_border=true" -o assets/stats.svg
+          grep -q "<svg" assets/stats.svg || git checkout -- assets/stats.svg 2>/dev/null || true
+
+      - name: Download Streak Stats card
+        run: |
+          curl -sL "https://streak-stats.demolab.com/?user=MistryVishwa&theme=tokyonight&hide_border=true" -o assets/streak.svg
+          grep -q "<svg" assets/streak.svg || git checkout -- assets/streak.svg 2>/dev/null || true
+
+      - name: Download Contribution Activity Graph
+        run: |
+          curl -sL "https://github-readme-activity-graph.vercel.app/graph?username=MistryVishwa&theme=tokyo-night&hide_border=true&area=true" -o assets/activity-graph.svg
+          grep -q "<svg" assets/activity-graph.svg || git checkout -- assets/activity-graph.svg 2>/dev/null || true
+
+      - name: Generate Profile Summary Cards
+        uses: vn7n24fzkq/github-profile-summary-cards@release
+        env:
+          # Must be a Personal Access Token stored as a repo secret
+          # named SUMMARY_GITHUB_TOKEN (see setup steps in the chat).
+          GITHUB_TOKEN: ${{ secrets.SUMMARY_GITHUB_TOKEN }}
+        with:
+          USERNAME: MistryVishwa
+          BRANCH_NAME: "main"
+          UTC_OFFSET: 5.5 # Ahmedabad, India
+          EXCLUDE: ""
+          AUTO_PUSH: false # we commit everything together in the next step
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/*.svg profile-summary-card-output || true
+          git diff --staged --quiet || git commit -m "chore: refresh profile analytics cards [skip ci]"
+          git push
